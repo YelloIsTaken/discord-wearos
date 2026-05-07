@@ -23,15 +23,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.RemoteInput
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
@@ -41,16 +41,18 @@ import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.CompactButton
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import androidx.wear.input.RemoteInputIntentHelper
 import com.yelloistaken.discordwearos.data.models.Channel
 import com.yelloistaken.discordwearos.data.models.Message
 import com.yelloistaken.discordwearos.ui.theme.DiscordBlurple
 import com.yelloistaken.discordwearos.ui.theme.DiscordDark
-import com.yelloistaken.discordwearos.ui.theme.DiscordDarker
 import com.yelloistaken.discordwearos.ui.theme.DiscordGray
 import com.yelloistaken.discordwearos.ui.theme.DiscordWhite
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+private const val KEY_TEXT_REPLY = "text_reply"
 
 @Composable
 fun MessageScreen(
@@ -118,7 +120,7 @@ fun MessageScreen(
             }
 
             item {
-                SendBar(channelId = channel.id, onSend = onSendMessage)
+                SendBar(onSend = onSendMessage)
             }
         }
     }
@@ -208,9 +210,21 @@ private fun MessageBubble(message: Message, isSelf: Boolean) {
 }
 
 @Composable
-private fun SendBar(channelId: String, onSend: (String) -> Unit) {
+private fun SendBar(onSend: (String) -> Unit) {
     val context = LocalContext.current
 
+    // Keyboard / system text-input overlay (keyboard, handwriting, emoji, voice tabs)
+    val textLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val bundle = RemoteInput.getResultsFromIntent(result.data ?: return@rememberLauncherForActivityResult)
+            val text = bundle?.getCharSequence(KEY_TEXT_REPLY)?.toString()
+            if (!text.isNullOrBlank()) onSend(text)
+        }
+    }
+
+    // Voice-only fast path (skips the system overlay picker)
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -218,63 +232,79 @@ private fun SendBar(channelId: String, onSend: (String) -> Unit) {
             val text = result.data
                 ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 ?.firstOrNull()
-            if (!text.isNullOrBlank()) {
-                onSend(text)
-            }
+            if (!text.isNullOrBlank()) onSend(text)
         }
     }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Button(
-            onClick = {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your message")
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                }
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    try { voiceLauncher.launch(intent) } catch (_: Exception) { }
-                }
-            },
-            modifier = Modifier.size(40.dp),
-            colors = ButtonDefaults.buttonColors(backgroundColor = DiscordBlurple),
-            shape = CircleShape
+        // Primary input row: keyboard and voice
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🎤", fontSize = 16.sp)
+            Button(
+                onClick = {
+                    val remoteInput = RemoteInput.Builder(KEY_TEXT_REPLY)
+                        .setLabel("Message")
+                        .build()
+                    val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
+                    RemoteInputIntentHelper.putRemoteInputsToIntent(listOf(remoteInput), intent)
+                    try { textLauncher.launch(intent) } catch (_: Exception) { }
+                },
+                modifier = Modifier.size(46.dp),
+                colors = ButtonDefaults.buttonColors(backgroundColor = DiscordBlurple),
+                shape = CircleShape
+            ) {
+                Text("⌨", fontSize = 20.sp)
+            }
+
+            Button(
+                onClick = {
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your message")
+                        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                    }
+                    if (intent.resolveActivity(context.packageManager) != null) {
+                        try { voiceLauncher.launch(intent) } catch (_: Exception) { }
+                    }
+                },
+                modifier = Modifier.size(46.dp),
+                colors = ButtonDefaults.buttonColors(backgroundColor = DiscordBlurple),
+                shape = CircleShape
+            ) {
+                Text("🎤", fontSize = 20.sp)
+            }
         }
 
-        Button(
-            onClick = { onSend("👍") },
-            modifier = Modifier.size(40.dp),
-            colors = ButtonDefaults.secondaryButtonColors(),
-            shape = CircleShape
+        // Quick-reply row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("👍", fontSize = 14.sp)
+            QuickReplyButton("👍", onSend)
+            QuickReplyButton("✅", onSend)
+            QuickReplyButton("😄", onSend)
+            QuickReplyButton("Ok", onSend)
         }
+    }
+}
 
-        Button(
-            onClick = { onSend("✅") },
-            modifier = Modifier.size(40.dp),
-            colors = ButtonDefaults.secondaryButtonColors(),
-            shape = CircleShape
-        ) {
-            Text("✅", fontSize = 14.sp)
-        }
-
-        Button(
-            onClick = { onSend("Ok") },
-            modifier = Modifier.size(40.dp),
-            colors = ButtonDefaults.secondaryButtonColors(),
-            shape = CircleShape
-        ) {
-            Text("Ok", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        }
+@Composable
+private fun QuickReplyButton(label: String, onSend: (String) -> Unit) {
+    Button(
+        onClick = { onSend(label) },
+        modifier = Modifier.size(36.dp),
+        colors = ButtonDefaults.secondaryButtonColors(),
+        shape = CircleShape
+    ) {
+        Text(label, fontSize = if (label.length > 2) 9.sp else 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 
