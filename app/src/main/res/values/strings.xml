@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Discord</string>
+    <string name="channel_connected">Discord Connected</string>
+    <string name="login_hint">Enter your Discord bot token</string>
+    <string name="reply_label">Reply</string>
+</resources>

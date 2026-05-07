@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="discord_blurple">#5865F2</color>
+    <color name="discord_dark">#2B2D31</color>
+    <color name="discord_darker">#1E1F22</color>
+    <color name="discord_green">#23A55A</color>
+    <color name="discord_red">#DA373C</color>
+    <color name="discord_white">#DBDBDB</color>
+    <color name="discord_gray">#80848E</color>
+</resources>

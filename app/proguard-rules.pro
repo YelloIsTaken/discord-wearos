@@ -1,0 +1,6 @@
+-keep class com.yelloistaken.discordwearos.data.models.** { *; }
+-keep class com.yelloistaken.discordwearos.data.gateway.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**
