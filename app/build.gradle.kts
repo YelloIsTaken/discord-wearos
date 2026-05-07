@@ -54,7 +54,6 @@ dependencies {
     implementation(libs.androidx.wear.compose.material)
     implementation(libs.androidx.wear.compose.foundation)
     implementation(libs.androidx.wear.compose.navigation)
-    implementation(libs.androidx.wear.input)
 
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.ktx)

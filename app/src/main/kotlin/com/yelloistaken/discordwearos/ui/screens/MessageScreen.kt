@@ -41,7 +41,6 @@ import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.CompactButton
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import androidx.wear.input.RemoteInputIntentHelper
 import com.yelloistaken.discordwearos.data.models.Channel
 import com.yelloistaken.discordwearos.data.models.Message
 import com.yelloistaken.discordwearos.ui.theme.DiscordBlurple
@@ -54,6 +53,8 @@ import java.time.format.DateTimeFormatter
 
 private const val KEY_TEXT_REPLY = "text_reply"
 private const val TAG = "MessageScreen"
+private const val ACTION_REMOTE_INPUT = "android.support.wearable.input.action.REMOTE_INPUT"
+private const val EXTRA_REMOTE_INPUTS = "android.support.wearable.input.extra.REMOTE_INPUTS"
 
 @Composable
 fun MessageScreen(
@@ -252,8 +253,9 @@ private fun SendBar(onSend: (String) -> Unit) {
                     val remoteInput = RemoteInput.Builder(KEY_TEXT_REPLY)
                         .setLabel("Message")
                         .build()
-                    val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
-                    RemoteInputIntentHelper.putRemoteInputsToIntent(listOf(remoteInput), intent)
+                    val intent = Intent(ACTION_REMOTE_INPUT).apply {
+                        putParcelableArrayListExtra(EXTRA_REMOTE_INPUTS, arrayListOf(remoteInput))
+                    }
                     try { textLauncher.launch(intent) } catch (e: Exception) { Log.w(TAG, "Failed to launch text input", e) }
                 },
                 modifier = Modifier.size(46.dp),
