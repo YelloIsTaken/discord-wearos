@@ -72,4 +72,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // Encrypted token storage
+    implementation(libs.androidx.security.crypto)
 }

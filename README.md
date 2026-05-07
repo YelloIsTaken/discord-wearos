@@ -50,12 +50,12 @@ gradle wrapper --gradle-version 8.9
 
 ## Architecture
 
-```
+```text
 data/
   models/       — Discord data classes (Guild, Channel, Message, Gateway events)
   api/          — Retrofit REST service (messages, channels, guilds)
   gateway/      — OkHttp WebSocket Discord Gateway v10
-  local/        — DataStore token storage
+  local/        — EncryptedSharedPreferences token storage
   repository/   — Coordinates REST calls
 service/
   GatewayService  — Foreground service hosting the WebSocket
@@ -77,7 +77,7 @@ ui/
 
 Swipe right at any screen to go back (standard Wear OS dismiss gesture).
 
-```
+```text
 Loading → [Login] → Guilds → Channels → Messages
 ```
 

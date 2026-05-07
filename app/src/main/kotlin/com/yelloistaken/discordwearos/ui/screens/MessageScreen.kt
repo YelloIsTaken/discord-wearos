@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -62,10 +63,13 @@ fun MessageScreen(
     onLoadMore: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
+    var prevNewestId by remember { mutableStateOf<String?>(null) }
+    val newestId = messages.lastOrNull()?.id
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
+    LaunchedEffect(newestId) {
+        if (messages.isNotEmpty() && newestId != prevNewestId) {
             listState.scrollToItem(messages.size - 1)
+            prevNewestId = newestId
         }
     }
 
@@ -205,7 +209,7 @@ private fun MessageBubble(message: Message, isSelf: Boolean) {
 
 @Composable
 private fun SendBar(channelId: String, onSend: (String) -> Unit) {
-    var pendingText by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -234,7 +238,9 @@ private fun SendBar(channelId: String, onSend: (String) -> Unit) {
                     putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your message")
                     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 }
-                voiceLauncher.launch(intent)
+                if (intent.resolveActivity(context.packageManager) != null) {
+                    try { voiceLauncher.launch(intent) } catch (_: Exception) { }
+                }
             },
             modifier = Modifier.size(40.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = DiscordBlurple),

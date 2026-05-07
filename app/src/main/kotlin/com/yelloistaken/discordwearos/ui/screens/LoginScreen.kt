@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,8 @@ fun LoginScreen(
     error: String?,
     onLogin: (String) -> Unit
 ) {
+    val context = LocalContext.current
+
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -41,7 +44,6 @@ fun LoginScreen(
                 ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 ?.firstOrNull()
                 ?.trim()
-                // voice recognition adds spaces in tokens — remove them
                 ?.replace(" ", "")
             if (!token.isNullOrBlank()) {
                 onLogin(token)
@@ -68,7 +70,7 @@ fun LoginScreen(
 
             item {
                 Text(
-                    text = "Speak or type your bot token to sign in",
+                    text = "Speak your bot token to sign in",
                     fontSize = 11.sp,
                     color = DiscordGray,
                     textAlign = TextAlign.Center,
@@ -105,7 +107,11 @@ fun LoginScreen(
                                 putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your bot token")
                                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                             }
-                            voiceLauncher.launch(intent)
+                            if (intent.resolveActivity(context.packageManager) != null) {
+                                try {
+                                    voiceLauncher.launch(intent)
+                                } catch (_: Exception) { }
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -123,7 +129,7 @@ fun LoginScreen(
 
             item {
                 Text(
-                    text = "Token stored locally on device only",
+                    text = "Token stored encrypted on device only",
                     fontSize = 10.sp,
                     color = DiscordGray,
                     textAlign = TextAlign.Center,

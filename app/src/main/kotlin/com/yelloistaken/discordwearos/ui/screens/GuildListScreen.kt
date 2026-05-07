@@ -142,13 +142,6 @@ private fun GuildChip(guild: Guild, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Medium
             )
-        },
-        secondaryLabel = {
-            Text(
-                text = "# server",
-                fontSize = 10.sp,
-                color = DiscordGray
-            )
         }
     )
 }

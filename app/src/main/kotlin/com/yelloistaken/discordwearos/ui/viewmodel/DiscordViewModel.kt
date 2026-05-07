@@ -14,7 +14,6 @@ import com.yelloistaken.discordwearos.data.repository.DiscordRepository
 import com.yelloistaken.discordwearos.data.repository.Result
 import com.yelloistaken.discordwearos.service.ACTION_START
 import com.yelloistaken.discordwearos.service.ACTION_STOP
-import com.yelloistaken.discordwearos.service.EXTRA_TOKEN
 import com.yelloistaken.discordwearos.service.GatewayEventBus
 import com.yelloistaken.discordwearos.service.GatewayService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,13 +85,10 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
                 }
             }
             is GatewayEvent.MessageCreated -> {
-                val current = _uiState.value
-                if (event.message.channelId == current.selectedChannel?.id) {
-                    _uiState.update { state ->
-                        val exists = state.messages.any { it.id == event.message.id }
-                        if (exists) state
-                        else state.copy(messages = state.messages + event.message)
-                    }
+                _uiState.update { state ->
+                    if (event.message.channelId != state.selectedChannel?.id) return@update state
+                    val exists = state.messages.any { it.id == event.message.id }
+                    if (exists) state else state.copy(messages = state.messages + event.message)
                 }
             }
             is GatewayEvent.MessageUpdated -> {
@@ -131,7 +127,7 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
                             isLoading = false
                         )
                     }
-                    startGatewayService(token)
+                    startGatewayService()
                     loadGuilds()
                 }
                 is Result.Error -> {
@@ -233,7 +229,10 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
         if (content.isBlank()) return
         val repo = repository ?: return
         viewModelScope.launch {
-            repo.sendMessage(channelId, content)
+            when (val result = repo.sendMessage(channelId, content)) {
+                is Result.Error -> _uiState.update { it.copy(error = result.message) }
+                is Result.Success -> {}
+            }
         }
     }
 
@@ -258,11 +257,10 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
         _uiState.update { it.copy(error = null) }
     }
 
-    private fun startGatewayService(token: String) {
+    private fun startGatewayService() {
         val context = getApplication<Application>()
         val intent = Intent(context, GatewayService::class.java).apply {
             action = ACTION_START
-            putExtra(EXTRA_TOKEN, token)
         }
         context.startForegroundService(intent)
     }

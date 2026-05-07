@@ -32,9 +32,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="com.yelloistaken.discordwearos.REPLY_ACTION" />
-            </intent-filter>
         </activity>
 
         <activity

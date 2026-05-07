@@ -5,12 +5,14 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import com.yelloistaken.discordwearos.data.gateway.DiscordGateway
+import com.yelloistaken.discordwearos.data.local.TokenManager
 import com.yelloistaken.discordwearos.data.models.GatewayEvent
 import com.yelloistaken.discordwearos.notifications.NOTIFICATION_ID_SERVICE
 import com.yelloistaken.discordwearos.notifications.buildServiceNotification
 import com.yelloistaken.discordwearos.notifications.showMessageNotification
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,12 +22,12 @@ private const val TAG = "GatewayService"
 
 const val ACTION_START = "START"
 const val ACTION_STOP = "STOP"
-const val EXTRA_TOKEN = "token"
 
 class GatewayService : Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var gateway: DiscordGateway? = null
+    private var eventsJob: Job? = null
     private var notifIdCounter = 1000
 
     val gatewayEvents: SharedFlow<GatewayEvent>?
@@ -41,8 +43,15 @@ class GatewayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val token = intent.getStringExtra(EXTRA_TOKEN) ?: return START_NOT_STICKY
-                startGateway(token)
+                scope.launch {
+                    val token = TokenManager(this@GatewayService).getToken()
+                    if (token != null) {
+                        startGateway(token)
+                    } else {
+                        Log.w(TAG, "No token found, cannot start gateway")
+                        stopSelf()
+                    }
+                }
             }
             ACTION_STOP -> {
                 stopGateway()
@@ -53,10 +62,12 @@ class GatewayService : Service() {
     }
 
     private fun startGateway(token: String) {
+        eventsJob?.cancel()
+        eventsJob = null
         gateway?.disconnect()
         gateway = DiscordGateway(token).also { gw ->
             gw.connect()
-            scope.launch {
+            eventsJob = scope.launch {
                 gw.events.collect { event ->
                     handleGatewayEvent(event)
                 }
@@ -67,6 +78,8 @@ class GatewayService : Service() {
     }
 
     private fun stopGateway() {
+        eventsJob?.cancel()
+        eventsJob = null
         gateway?.disconnect()
         gateway = null
         GatewayEventBus.clearGateway()
@@ -77,7 +90,6 @@ class GatewayService : Service() {
         when (event) {
             is GatewayEvent.MessageCreated -> {
                 GatewayEventBus.emit(event)
-                // Show notification only when app is not in foreground (best-effort)
                 val notifId = notifIdCounter++
                 showMessageNotification(this, event.message, notifId)
             }

@@ -16,7 +16,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -57,6 +56,7 @@ class DiscordGateway(private val token: String) {
 
     private var webSocket: WebSocket? = null
     private var heartbeatJob: Job? = null
+    private var reconnectJob: Job? = null
     private var lastSequence: Int? = null
     private var sessionId: String? = null
     private var resumeUrl: String? = null
@@ -76,13 +76,15 @@ class DiscordGateway(private val token: String) {
     }
 
     fun disconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
         heartbeatJob?.cancel()
+        heartbeatJob = null
         webSocket?.close(1000, "Logout")
         webSocket = null
         sessionId = null
         resumeUrl = null
         lastSequence = null
-        scope.cancel()
         Log.d(TAG, "Disconnected")
     }
 
@@ -261,16 +263,21 @@ class DiscordGateway(private val token: String) {
             lastSequence = null
         }
         heartbeatJob?.cancel()
+        heartbeatJob = null
         webSocket?.close(1000, "Reconnecting")
-        scope.launch {
-            delay(2_000)
-            connect()
-        }
+        webSocket = null
+        scheduleReconnectWithDelay(2_000)
     }
 
     private fun scheduleReconnect() {
-        scope.launch {
-            delay(5_000)
+        scheduleReconnectWithDelay(5_000)
+    }
+
+    private fun scheduleReconnectWithDelay(delayMs: Long) {
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            delay(delayMs)
+            reconnectJob = null
             connect()
         }
     }

@@ -19,7 +19,9 @@ class DiscordRepository(token: String) {
     suspend fun getCurrentUser(): Result<DiscordUser> = try {
         val response = api.getCurrentUser()
         if (response.isSuccessful) {
-            Result.Success(response.body()!!)
+            val body = response.body()
+                ?: return Result.Error("Empty response", response.code())
+            Result.Success(body)
         } else {
             Result.Error("Auth failed: ${response.code()}", response.code())
         }
@@ -74,7 +76,9 @@ class DiscordRepository(token: String) {
             com.yelloistaken.discordwearos.data.models.SendMessageRequest(content)
         )
         if (response.isSuccessful) {
-            Result.Success(response.body()!!)
+            val body = response.body()
+                ?: return Result.Error("Empty response", response.code())
+            Result.Success(body)
         } else {
             Result.Error("Failed to send: ${response.code()}", response.code())
         }

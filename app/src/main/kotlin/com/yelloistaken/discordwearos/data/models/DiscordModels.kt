@@ -29,7 +29,7 @@ data class Channel(
     val position: Int = 0,
     @SerializedName("parent_id") val parentId: String?
 ) {
-    val isText: Boolean get() = type == 0 || type == 5 || type == 15
+    val isText: Boolean get() = type == 0 || type == 5 || type == 10 || type == 11 || type == 12
     val isDm: Boolean get() = type == 1 || type == 3
     val displayName: String get() = name ?: "Unknown"
 }
