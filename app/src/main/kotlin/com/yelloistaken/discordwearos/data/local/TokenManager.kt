@@ -49,7 +49,7 @@ class TokenManager(private val context: Context) {
 
     val isBotFlow: Flow<Boolean> = flow {
         emit(withContext(Dispatchers.IO) {
-            try { encryptedPrefs.getBoolean(IS_BOT_KEY_SP, true) } catch (e: Exception) { true }
+            try { encryptedPrefs.getBoolean(IS_BOT_KEY_SP, false) } catch (e: Exception) { false }
         })
     }
 
@@ -82,6 +82,6 @@ class TokenManager(private val context: Context) {
     }
 
     suspend fun getIsBot(): Boolean = withContext(Dispatchers.IO) {
-        try { encryptedPrefs.getBoolean(IS_BOT_KEY_SP, true) } catch (e: Exception) { true }
+        try { encryptedPrefs.getBoolean(IS_BOT_KEY_SP, false) } catch (e: Exception) { false }
     }
 }

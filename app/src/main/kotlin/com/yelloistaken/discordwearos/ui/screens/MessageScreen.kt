@@ -3,6 +3,7 @@ package com.yelloistaken.discordwearos.ui.screens
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -25,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +53,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private const val KEY_TEXT_REPLY = "text_reply"
+private const val TAG = "MessageScreen"
 
 @Composable
 fun MessageScreen(
@@ -211,8 +212,6 @@ private fun MessageBubble(message: Message, isSelf: Boolean) {
 
 @Composable
 private fun SendBar(onSend: (String) -> Unit) {
-    val context = LocalContext.current
-
     // Keyboard / system text-input overlay (keyboard, handwriting, emoji, voice tabs)
     val textLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -255,7 +254,7 @@ private fun SendBar(onSend: (String) -> Unit) {
                         .build()
                     val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
                     RemoteInputIntentHelper.putRemoteInputsToIntent(listOf(remoteInput), intent)
-                    try { textLauncher.launch(intent) } catch (_: Exception) { }
+                    try { textLauncher.launch(intent) } catch (e: Exception) { Log.w(TAG, "Failed to launch text input", e) }
                 },
                 modifier = Modifier.size(46.dp),
                 colors = ButtonDefaults.buttonColors(backgroundColor = DiscordBlurple),
@@ -271,9 +270,7 @@ private fun SendBar(onSend: (String) -> Unit) {
                         putExtra(RecognizerIntent.EXTRA_PROMPT, "Say your message")
                         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                     }
-                    if (intent.resolveActivity(context.packageManager) != null) {
-                        try { voiceLauncher.launch(intent) } catch (_: Exception) { }
-                    }
+                    try { voiceLauncher.launch(intent) } catch (e: Exception) { Log.w(TAG, "Failed to launch voice input", e) }
                 },
                 modifier = Modifier.size(46.dp),
                 colors = ButtonDefaults.buttonColors(backgroundColor = DiscordBlurple),
@@ -304,7 +301,7 @@ private fun QuickReplyButton(label: String, onSend: (String) -> Unit) {
         colors = ButtonDefaults.secondaryButtonColors(),
         shape = CircleShape
     ) {
-        Text(label, fontSize = if (label.length > 2) 9.sp else 13.sp, fontWeight = FontWeight.Medium)
+        Text(label, fontSize = if (label.length >= 2) 9.sp else 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 

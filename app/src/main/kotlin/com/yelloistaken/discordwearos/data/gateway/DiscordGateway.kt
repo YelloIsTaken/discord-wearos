@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.yelloistaken.discordwearos.data.models.Channel
 import com.yelloistaken.discordwearos.data.models.DiscordUser
+import com.yelloistaken.discordwearos.data.resolveAuthToken
 import com.yelloistaken.discordwearos.data.models.GatewayEvent
 import com.yelloistaken.discordwearos.data.models.GuildCreateData
 import com.yelloistaken.discordwearos.data.models.HelloData
@@ -171,14 +172,8 @@ class DiscordGateway(private val token: String, private val isBot: Boolean) {
         webSocket?.send("""{"op":$OP_HEARTBEAT,"d":$seq}""")
     }
 
-    private fun resolveAuthToken(): String = when {
-        !isBot -> token
-        token.startsWith("Bot ") || token.startsWith("Bearer ") -> token
-        else -> "Bot $token"
-    }
-
     private fun sendIdentify() {
-        val authToken = resolveAuthToken()
+        val authToken = resolveAuthToken(token, isBot)
         val payload = if (isBot) {
             """{"op":$OP_IDENTIFY,"d":{"token":"$authToken","properties":{"os":"android","browser":"discord-wearos","device":"wear-os"},"intents":$GATEWAY_INTENTS,"compress":false,"large_threshold":50}}"""
         } else {
@@ -190,7 +185,7 @@ class DiscordGateway(private val token: String, private val isBot: Boolean) {
     }
 
     private fun sendResume() {
-        val authToken = resolveAuthToken()
+        val authToken = resolveAuthToken(token, isBot)
         val payload = """
             {
               "op": $OP_RESUME,
