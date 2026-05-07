@@ -44,9 +44,10 @@ class GatewayService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 scope.launch {
-                    val token = TokenManager(this@GatewayService).getToken()
+                    val tm = TokenManager(this@GatewayService)
+                    val token = tm.getToken()
                     if (token != null) {
-                        startGateway(token)
+                        startGateway(token, tm.getIsBot())
                     } else {
                         Log.w(TAG, "No token found, cannot start gateway")
                         stopSelf()
@@ -61,11 +62,11 @@ class GatewayService : Service() {
         return START_STICKY
     }
 
-    private fun startGateway(token: String) {
+    private fun startGateway(token: String, isBot: Boolean) {
         eventsJob?.cancel()
         eventsJob = null
         gateway?.disconnect()
-        gateway = DiscordGateway(token).also { gw ->
+        gateway = DiscordGateway(token, isBot).also { gw ->
             gw.connect()
             eventsJob = scope.launch {
                 gw.events.collect { event ->

@@ -12,9 +12,9 @@ sealed class Result<out T> {
     data class Error(val message: String, val code: Int = -1) : Result<Nothing>()
 }
 
-class DiscordRepository(token: String) {
+class DiscordRepository(token: String, isBot: Boolean) {
 
-    private val api: DiscordApiService = DiscordApiFactory.create(token)
+    private val api: DiscordApiService = DiscordApiFactory.create(token, isBot)
 
     suspend fun getCurrentUser(): Result<DiscordUser> = try {
         val response = api.getCurrentUser()

@@ -51,7 +51,7 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val savedToken = tokenManager.tokenFlow.firstOrNull()
             if (!savedToken.isNullOrBlank()) {
-                initializeWithToken(savedToken)
+                initializeWithToken(savedToken, tokenManager.getIsBot())
             }
         }
         collectGatewayEvents()
@@ -107,17 +107,18 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun login(token: String) {
+    fun login(token: String, isBot: Boolean) {
         if (token.isBlank()) {
             _uiState.update { it.copy(error = "Token cannot be empty") }
             return
         }
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            val repo = DiscordRepository(token)
+            val repo = DiscordRepository(token, isBot)
             when (val result = repo.getCurrentUser()) {
                 is Result.Success -> {
                     tokenManager.saveToken(token)
+                    tokenManager.saveIsBot(isBot)
                     tokenManager.saveUserInfo(result.data.id, result.data.displayName)
                     repository = repo
                     _uiState.update { state ->
@@ -142,9 +143,9 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun initializeWithToken(token: String) {
+    private suspend fun initializeWithToken(token: String, isBot: Boolean) {
         _uiState.update { it.copy(isLoading = true) }
-        val repo = DiscordRepository(token)
+        val repo = DiscordRepository(token, isBot)
         when (val result = repo.getCurrentUser()) {
             is Result.Success -> {
                 repository = repo
@@ -155,7 +156,7 @@ class DiscordViewModel(application: Application) : AndroidViewModel(application)
                         isLoading = false
                     )
                 }
-                startGatewayService(token)
+                startGatewayService()
                 loadGuilds()
             }
             is Result.Error -> {

@@ -25,6 +25,7 @@ class TokenManager(private val context: Context) {
     companion object {
         private const val ENCRYPTED_PREFS_FILE = "discord_token_prefs"
         private const val TOKEN_KEY_SP = "discord_token"
+        private const val IS_BOT_KEY_SP = "is_bot_token"
         private val USER_ID_KEY = stringPreferencesKey("user_id")
         private val USERNAME_KEY = stringPreferencesKey("username")
     }
@@ -46,12 +47,22 @@ class TokenManager(private val context: Context) {
         emit(withContext(Dispatchers.IO) { encryptedPrefs.getString(TOKEN_KEY_SP, null) })
     }
 
+    val isBotFlow: Flow<Boolean> = flow {
+        emit(withContext(Dispatchers.IO) {
+            try { encryptedPrefs.getBoolean(IS_BOT_KEY_SP, true) } catch (e: Exception) { true }
+        })
+    }
+
     val usernameFlow: Flow<String?> = context.dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { prefs -> prefs[USERNAME_KEY] }
 
     suspend fun saveToken(token: String) = withContext(Dispatchers.IO) {
         encryptedPrefs.edit().putString(TOKEN_KEY_SP, token).apply()
+    }
+
+    suspend fun saveIsBot(isBot: Boolean) = withContext(Dispatchers.IO) {
+        encryptedPrefs.edit().putBoolean(IS_BOT_KEY_SP, isBot).apply()
     }
 
     suspend fun saveUserInfo(userId: String, username: String) {
@@ -68,5 +79,9 @@ class TokenManager(private val context: Context) {
 
     suspend fun getToken(): String? = withContext(Dispatchers.IO) {
         try { encryptedPrefs.getString(TOKEN_KEY_SP, null) } catch (e: Exception) { null }
+    }
+
+    suspend fun getIsBot(): Boolean = withContext(Dispatchers.IO) {
+        try { encryptedPrefs.getBoolean(IS_BOT_KEY_SP, true) } catch (e: Exception) { true }
     }
 }

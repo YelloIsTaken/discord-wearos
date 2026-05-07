@@ -49,11 +49,11 @@ object DiscordApiFactory {
 
     private const val BASE_URL = "https://discord.com/api/v10/"
 
-    fun create(token: String): DiscordApiService {
-        val authToken = if (token.startsWith("Bot ") || token.startsWith("Bearer ")) {
-            token
-        } else {
-            "Bot $token"
+    fun create(token: String, isBot: Boolean): DiscordApiService {
+        val authToken = when {
+            !isBot -> token                                           // user account: raw token
+            token.startsWith("Bot ") || token.startsWith("Bearer ") -> token
+            else -> "Bot $token"
         }
 
         val logging = HttpLoggingInterceptor().apply {

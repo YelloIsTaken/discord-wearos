@@ -45,7 +45,7 @@ private const val OP_HEARTBEAT_ACK = 11
 // Gateway intents: GUILDS | GUILD_MESSAGES | MESSAGE_CONTENT | DIRECT_MESSAGES | DIRECT_MESSAGE_REACTIONS
 private const val GATEWAY_INTENTS = 1 or 512 or 32768 or 4096 or 8192
 
-class DiscordGateway(private val token: String) {
+class DiscordGateway(private val token: String, private val isBot: Boolean) {
 
     private val gson = Gson()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -171,38 +171,26 @@ class DiscordGateway(private val token: String) {
         webSocket?.send("""{"op":$OP_HEARTBEAT,"d":$seq}""")
     }
 
+    private fun resolveAuthToken(): String = when {
+        !isBot -> token
+        token.startsWith("Bot ") || token.startsWith("Bearer ") -> token
+        else -> "Bot $token"
+    }
+
     private fun sendIdentify() {
-        val authToken = if (token.startsWith("Bot ") || token.startsWith("Bearer ")) {
-            token
+        val authToken = resolveAuthToken()
+        val payload = if (isBot) {
+            """{"op":$OP_IDENTIFY,"d":{"token":"$authToken","properties":{"os":"android","browser":"discord-wearos","device":"wear-os"},"intents":$GATEWAY_INTENTS,"compress":false,"large_threshold":50}}"""
         } else {
-            "Bot $token"
+            // User account: omit intents (bots-only field); mimic the Android client
+            """{"op":$OP_IDENTIFY,"d":{"token":"$authToken","properties":{"os":"android","browser":"Discord Android","device":"android"},"compress":false}}"""
         }
-        val payload = """
-            {
-              "op": $OP_IDENTIFY,
-              "d": {
-                "token": "$authToken",
-                "properties": {
-                  "os": "android",
-                  "browser": "discord-wearos",
-                  "device": "wear-os"
-                },
-                "intents": $GATEWAY_INTENTS,
-                "compress": false,
-                "large_threshold": 50
-              }
-            }
-        """.trimIndent()
         webSocket?.send(payload)
-        Log.d(TAG, "Sent IDENTIFY")
+        Log.d(TAG, "Sent IDENTIFY (isBot=$isBot)")
     }
 
     private fun sendResume() {
-        val authToken = if (token.startsWith("Bot ") || token.startsWith("Bearer ")) {
-            token
-        } else {
-            "Bot $token"
-        }
+        val authToken = resolveAuthToken()
         val payload = """
             {
               "op": $OP_RESUME,
