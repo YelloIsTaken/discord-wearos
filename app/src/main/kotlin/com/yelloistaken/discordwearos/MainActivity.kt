@@ -76,9 +76,9 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(
                             isLoading = uiState.isLoading,
                             error = uiState.error,
-                            onLogin = { token ->
+                            onLogin = { token, isBot ->
                                 viewModel.clearError()
-                                viewModel.login(token)
+                                viewModel.login(token, isBot)
                             }
                         )
                         LaunchedEffect(uiState.isLoggedIn) {

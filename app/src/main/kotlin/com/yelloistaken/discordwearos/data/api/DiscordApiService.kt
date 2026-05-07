@@ -5,6 +5,7 @@ import com.yelloistaken.discordwearos.data.models.DiscordUser
 import com.yelloistaken.discordwearos.data.models.Guild
 import com.yelloistaken.discordwearos.data.models.Message
 import com.yelloistaken.discordwearos.data.models.SendMessageRequest
+import com.yelloistaken.discordwearos.data.resolveAuthToken
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
@@ -49,12 +50,8 @@ object DiscordApiFactory {
 
     private const val BASE_URL = "https://discord.com/api/v10/"
 
-    fun create(token: String): DiscordApiService {
-        val authToken = if (token.startsWith("Bot ") || token.startsWith("Bearer ")) {
-            token
-        } else {
-            "Bot $token"
-        }
+    fun create(token: String, isBot: Boolean): DiscordApiService {
+        val authToken = resolveAuthToken(token, isBot)
 
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
